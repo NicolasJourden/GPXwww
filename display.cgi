@@ -1,19 +1,36 @@
 #!/usr/bin/perl
 
-use strict;
+# Nicolas JOURDEN - 2016-05-23 - GPLv2
+
+use CGI::Carp 'fatalsToBrowser';
 use CGI;
 use Data::Dumper;
 use XML::Simple;
+use File::Basename;
 
 # Deal with CGI:
 my $q = new CGI;
 my $file = $q->param('f');
-$file =~ s/[^0-9a-zA-Z\._]//g;
+$file =~ s/[^a-zA-Z0-9 _-]//g;
+my $lat = 0.0;
+my $lon = 0.0;
 
 # Parse the GPX:
-my $doc = XMLin("/data/GPXwww/gpx/$file", KeyAttr=>{'other_package'}) or die "Error! $!";
-my $lat = $doc->{trk}->{trkseg}->{trkpt}[0]->{lat};
-my $lon = $doc->{trk}->{trkseg}->{trkpt}[0]->{lon};
+my $doc = XMLin("/data/GPXwww/gpx/$file.gpx", KeyAttr=>{'other_package'}) or die "Error! $!";
+eval 
+{
+  $lat = $doc->{trk}->{trkseg}->{trkpt}[0]->{lat};
+  $lon = $doc->{trk}->{trkseg}->{trkpt}[0]->{lon};
+};
+if ($@)
+{
+  eval 
+  {
+    $lat = $doc->{trk}->{trkseg}[0]->{trkpt}[0]->{lat};
+    $lon = $doc->{trk}->{trkseg}[0]->{trkpt}[0]->{lon};
+  };
+}
+
 
 # Print the header and content:
 print $q->header;
@@ -41,8 +58,9 @@ print qq{
       } );
 
       // Define the map layer
-      layerMapnik = new OpenLayers.Layer.OSM.Mapnik("Mapnik");
-      map.addLayer(layerMapnik);
+      layerMapnik = new OpenLayers.Layer.TMS("Mapnik", ['http://tile1.tile.openstreetmap.org/tiles/', 'http://tile2.tile.openstreetmap.org/tiles/'], {'layername':'mapnik'})
+//      layerMapnik = new OpenLayers.Layer.OSM.Mapnik("Mapnik");
+//      map.addLayer(layerMapnik);
       layerCycleMap = new OpenLayers.Layer.OSM.CycleMap("CycleMap");
       map.addLayer(layerCycleMap);
       layerMarkers = new OpenLayers.Layer.Markers("Markers");
@@ -52,7 +70,7 @@ print qq{
       var lgpx = new OpenLayers.Layer.Vector("Lakeside cycle ride", {
         strategies: [new OpenLayers.Strategy.Fixed()],
         protocol: new OpenLayers.Protocol.HTTP({
-          url: "gpx/$file",
+          url: "gpx/$file.gpx",
           format: new OpenLayers.Format.GPX()
         }),
         style: {strokeColor: "purple", strokeWidth: 5, strokeOpacity: 0.5},
@@ -64,7 +82,7 @@ print qq{
       // but maybe you want to get this from the URL params)
       var lat=$lat;
       var lon=$lon;
-      var zoom=10;
+      var zoom=12;
       var lonLat = new OpenLayers.LonLat(lon, lat).transform(new OpenLayers.Projection("EPSG:4326"), map.getProjectionObject());
       map.setCenter(lonLat, zoom);
     }
