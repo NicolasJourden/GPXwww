@@ -1,0 +1,4 @@
+Options -Indexes
+<Files "*.data">
+deny from all
+</Files>
