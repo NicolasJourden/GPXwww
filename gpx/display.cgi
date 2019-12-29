@@ -31,7 +31,6 @@ if ($@)
   };
 }
 
-
 # Print the header and content:
 print $q->header;
 print qq{
